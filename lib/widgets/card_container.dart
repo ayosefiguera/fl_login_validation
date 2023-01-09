@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class CardContainer extends StatelessWidget {
-  const CardContainer({super.key, required this.child, required this.title});
+  const CardContainer({super.key, required this.child, this.title = ""});
 
   final Widget child;
   final String title;
@@ -9,20 +9,20 @@ class CardContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 30),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(10),
           decoration: _createCardShape(),
           child: Column(
             children: [
-              const SizedBox(height: 10),
+              if (title != '') const SizedBox(height: 20),
               Text(
                 title,
                 style: Theme.of(context).textTheme.headline4,
               ),
               const SizedBox(
-                height: 10,
+                height: 20,
               ),
               child,
             ],
