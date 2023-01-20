@@ -1,9 +1,12 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/src/widgets/container.dart';
-import 'package:flutter/src/widgets/framework.dart';
 
 class ProductImage extends StatelessWidget {
+  final String? url;
+  const ProductImage({
+    super.key,
+    this.url,
+  });
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -14,11 +17,13 @@ class ProductImage extends StatelessWidget {
           height: 450,
           child: ClipRRect(
             borderRadius: _buildBorderRadius,
-            child: const FadeInImage(
-              placeholder: AssetImage('assets/jar-loading.gif'),
-              image: NetworkImage('https://via.placeholder.com/400x300/f6f6f6'),
-              fit: BoxFit.cover,
-            ),
+            child: url == null
+                ? const Image(image: AssetImage('assets/no-image.png'))
+                : FadeInImage(
+                    placeholder: const AssetImage('assets/jar-loading.gif'),
+                    image: NetworkImage(url!),
+                    fit: BoxFit.cover,
+                  ),
           ),
         ));
   }

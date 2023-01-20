@@ -1,12 +1,30 @@
+import 'package:fl_product/services/services.dart';
 import 'package:fl_product/themes/app_theme.dart';
 import 'package:fl_product/ui/input_decorations.dart';
-import 'package:fl_product/widgets/card_container.dart';
 import 'package:fl_product/widgets/product_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+
+import '../models/models.dart';
 
 class ProductScreen extends StatelessWidget {
   const ProductScreen({Key? key}) : super(key: key);
 
+  @override
+  Widget build(BuildContext context) {
+    final ProductService productService = Provider.of<ProductService>(context);
+    return ChangeNotifierProvider(
+        create: (_) => ProductFormProvider(productService.selecteProduct),
+        child: _ProductScreenBody(
+          product: productService.selecteProduct,
+        ));
+  }
+}
+
+class _ProductScreenBody extends StatelessWidget {
+  final Product product;
+  const _ProductScreenBody({required this.product});
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -15,7 +33,7 @@ class ProductScreen extends StatelessWidget {
         child: Column(
           children: [
             Stack(children: [
-              ProductImage(),
+              ProductImage(url: product.picture),
               Positioned(
                   top: 60,
                   left: 20,
@@ -45,7 +63,7 @@ class ProductScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   decoration: _buildBoxDecoration(),
                   width: double.infinity,
-                  child: ProductForm()),
+                  child: const ProductForm()),
             ),
             const SizedBox(
               height: 100,
@@ -74,32 +92,58 @@ class ProductScreen extends StatelessWidget {
 }
 
 class ProductForm extends StatelessWidget {
-  const ProductForm({super.key});
+  const ProductForm({
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
-    bool _sliderEnable = true;
-    return Container(
-      child: Form(
-          child: Column(
-        children: [
-          TextFormField(
-            autocorrect: true,
-            decoration: InputDecorations.authInputDecoration(
-                hintText: 'Name:', labelText: 'Product\'s name'),
-          ),
-          TextFormField(
-            keyboardType: TextInputType.number,
-            decoration: InputDecorations.authInputDecoration(
-                hintText: '150', labelText: 'Product\'s price'),
-          ),
-          SwitchListTile.adaptive(
-              value: _sliderEnable,
-              title: Text('Avaliable'),
-              activeColor: AppTheme.primaryColor,
-              onChanged: ((value) {}))
-        ],
-      )),
-    );
+    final productForm = Provider.of<ProductFormProvider>(context);
+    final product = productForm.product;
+
+    return Form(
+        child: Column(
+      children: [
+        TextFormField(
+          initialValue: product.name,
+          autocorrect: true,
+          decoration: InputDecorations.authInputDecoration(
+              hintText: 'Name:', labelText: 'Product\'s name'),
+          onChanged: (value) => {product.name = value},
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return "Name can't be empty.";
+            }
+            return null;
+          },
+        ),
+        TextFormField(
+          initialValue: '${product.price}',
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'^(\d+)?\.?\d{0,2}'))
+          ],
+          keyboardType: TextInputType.number,
+          decoration: InputDecorations.authInputDecoration(
+              hintText: '150', labelText: 'Product\'s price'),
+          onChanged: (value) => {
+            if (double.tryParse(value) == null)
+              {product.price = 0}
+            else
+              {product.price = double.parse(value)}
+          },
+          validator: (value) {
+            if (value == null || double.parse(value) < 0) {
+              return 'The price must be positive';
+            }
+            return null;
+          },
+        ),
+        SwitchListTile.adaptive(
+            value: product.avaliable,
+            title: const Text('Avaliable'),
+            activeColor: AppTheme.primaryColor,
+            onChanged: productForm.updateAvailability)
+      ],
+    ));
   }
 }
