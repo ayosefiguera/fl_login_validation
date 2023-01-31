@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:fl_product/services/services.dart';
 import 'package:fl_product/themes/app_theme.dart';
 import 'package:fl_product/ui/input_decorations.dart';
@@ -5,6 +7,7 @@ import 'package:fl_product/widgets/product_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../models/models.dart';
 
@@ -27,6 +30,8 @@ class _ProductScreenBody extends StatelessWidget {
   const _ProductScreenBody({required this.product});
   @override
   Widget build(BuildContext context) {
+    final productForm = Provider.of<ProductFormProvider>(context);
+    final ProductService productService = Provider.of<ProductService>(context);
     return Scaffold(
       body: SingleChildScrollView(
         padding: const EdgeInsets.only(top: 30),
@@ -49,7 +54,18 @@ class _ProductScreenBody extends StatelessWidget {
                   top: 60,
                   right: 20,
                   child: IconButton(
-                    onPressed: () {},
+                    onPressed: () async {
+                      final picker = ImagePicker();
+                      final XFile? pickedFile = await picker.pickImage(
+                          source: ImageSource.camera, imageQuality: 100);
+                      if (pickedFile == null) {
+                        print('no picture selected');
+                        return;
+                      }
+
+                      productService
+                          .updateSelectedProductImage(pickedFile.path);
+                    },
                     icon: const Icon(
                       Icons.camera_alt_outlined,
                       size: 40,
@@ -72,10 +88,21 @@ class _ProductScreenBody extends StatelessWidget {
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endDocked,
-      floatingActionButton: FloatingActionButton(
-        child: const Icon(Icons.save_outlined),
-        onPressed: () => Navigator.of(context).pop(),
-      ),
+      floatingActionButton: 
+      FloatingActionButton(
+              onPressed:  productService.isSaving 
+              ? null
+              : () async {
+                if (!productForm.isValidForm()) return;
+                final String? imageUrl = await productService.uploadImage();
+
+                if (imageUrl != null) productForm.product.picture = imageUrl;
+                await productService.saveOrCreateProduct(productForm.product);
+              },
+              child: productService.isSaving 
+              ?  const CircularProgressIndicator()
+              :  const Icon(Icons.save_outlined),
+            )
     );
   }
 
@@ -102,48 +129,50 @@ class ProductForm extends StatelessWidget {
     final product = productForm.product;
 
     return Form(
+        key: productForm.formKey,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
         child: Column(
-      children: [
-        TextFormField(
-          initialValue: product.name,
-          autocorrect: true,
-          decoration: InputDecorations.authInputDecoration(
-              hintText: 'Name:', labelText: 'Product\'s name'),
-          onChanged: (value) => {product.name = value},
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return "Name can't be empty.";
-            }
-            return null;
-          },
-        ),
-        TextFormField(
-          initialValue: '${product.price}',
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'^(\d+)?\.?\d{0,2}'))
+          children: [
+            TextFormField(
+              initialValue: product.name,
+              autocorrect: true,
+              decoration: InputDecorations.authInputDecoration(
+                  hintText: 'Name:', labelText: 'Product\'s name'),
+              onChanged: (value) => {product.name = value},
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return "Name can't be empty.";
+                }
+                return null;
+              },
+            ),
+            TextFormField(
+              initialValue: '${product.price}',
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^(\d+)?\.?\d{0,2}'))
+              ],
+              keyboardType: TextInputType.number,
+              decoration: InputDecorations.authInputDecoration(
+                  hintText: '150', labelText: 'Product\'s price'),
+              onChanged: (value) => {
+                if (double.tryParse(value) == null)
+                  {product.price = 0}
+                else
+                  {product.price = double.parse(value)}
+              },
+              validator: (value) {
+                if (value == null) {
+                  return 'The price must be positive';
+                }
+                return null;
+              },
+            ),
+            SwitchListTile.adaptive(
+                value: product.avaliable,
+                title: const Text('Avaliable'),
+                activeColor: AppTheme.primaryColor,
+                onChanged: productForm.updateAvailability)
           ],
-          keyboardType: TextInputType.number,
-          decoration: InputDecorations.authInputDecoration(
-              hintText: '150', labelText: 'Product\'s price'),
-          onChanged: (value) => {
-            if (double.tryParse(value) == null)
-              {product.price = 0}
-            else
-              {product.price = double.parse(value)}
-          },
-          validator: (value) {
-            if (value == null || double.parse(value) < 0) {
-              return 'The price must be positive';
-            }
-            return null;
-          },
-        ),
-        SwitchListTile.adaptive(
-            value: product.avaliable,
-            title: const Text('Avaliable'),
-            activeColor: AppTheme.primaryColor,
-            onChanged: productForm.updateAvailability)
-      ],
-    ));
+        ));
   }
 }
